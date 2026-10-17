@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Card Stack</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="stage-wrap"><div id="stage">
+    <div id="pill" class="hit hidden" title="Click to finish early">
+      <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 9v4l2.5 2M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <span id="pill-text"></span>
+    </div>
+    <div id="toast"></div>
+      <i class="bubble" style="left:30px;top:330px;width:22px;height:22px;animation-duration:7s;animation-delay:0s"></i>
+      <i class="bubble" style="left:330px;top:300px;width:16px;height:16px;animation-duration:8.5s;animation-delay:2.5s"></i>
+      <i class="bubble" style="left:70px;top:250px;width:12px;height:12px;animation-duration:6.5s;animation-delay:4s"></i>
+      <i class="bubble" style="left:300px;top:360px;width:26px;height:26px;animation-duration:9s;animation-delay:1.2s"></i>
+      <i class="bubble" style="left:185px;top:180px;width:10px;height:10px;animation-duration:7.5s;animation-delay:5.5s"></i>
+      <div id="stack"></div>
+      <div id="controls">
+        <div id="dock" class="hit" title="Drag to move"></div>
+        <button id="btn-add" class="round add hit" title="Add cards">
+          <svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/></svg>
+        </button>
+        <button id="btn-alert" class="round alert hit" title="Send an alert">
+          <svg viewBox="0 0 24 24" width="25" height="25"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 1.8H4.4z" fill="#fff"/><path d="M10 20.5a2.1 2.1 0 0 0 4 0" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div></div>
+
+    <div id="panel-wrap"><div id="panel" class="hit hidden"></div></div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

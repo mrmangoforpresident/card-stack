@@ -1,0 +1,45 @@
+{
+  "name": "card-stack",
+  "version": "2.1.0",
+  "productName": "Card Stack",
+  "description": "A desktop to-do pet: a stack of cards you flip through, with focus timers that email your friends.",
+  "main": "main.js",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "nodemailer": "^10.1.1"
+  },
+  "devDependencies": {
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.cardstack.app",
+    "productName": "Card Stack",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "style.css",
+      "icon.png"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Card Stack",
+      "artifactName": "Card-Stack-Setup.exe"
+    }
+  }
+}
