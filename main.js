@@ -8,6 +8,11 @@ const nodemailer = require('nodemailer');
 const DATA_DIR = process.env.CARDSTACK_DATA_DIR || path.join(app.getPath('appData'), 'CardStack');
 const DATA_PATH = path.join(DATA_DIR, 'data.json');
 const BACKUP_PATH = path.join(DATA_DIR, 'data.backup.json');
+
+// Electron keeps the key that encrypts the saved email password in its
+// userData folder, which is named after the app. Pin it so renaming the app
+// can never make a saved password unreadable.
+app.setPath('userData', path.join(app.getPath('appData'), 'card-stack'));
 const ICON = path.join(__dirname, 'icon.png');
 const COLORS = ['#ffd166', '#7bdff2', '#b9f2a1', '#f7a8c8', '#c6b6ff', '#ffb68a'];
 const WIN_W = 300;
@@ -65,7 +70,13 @@ function save() {
 
 function getPassword() {
   const s = data.settings;
-  if (s.passwordEnc) return safeStorage.decryptString(Buffer.from(s.passwordEnc, 'base64'));
+  if (s.passwordEnc) {
+    try {
+      return safeStorage.decryptString(Buffer.from(s.passwordEnc, 'base64'));
+    } catch {
+      return ''; // saved on another PC or Windows account; the user re-enters it
+    }
+  }
   return s.password || '';
 }
 
@@ -86,7 +97,7 @@ function publicState() {
     recipients: data.recipients, last_minutes: data.last_minutes,
     always_on_top: data.always_on_top,
     settings: { name: s.name || '', email: s.email || '', host: s.host || '', port: s.port || 465,
-                hasPassword: !!(s.passwordEnc || s.password) },
+                hasPassword: !!getPassword() },
   };
 }
 
@@ -111,6 +122,7 @@ const msgId = () => `<${uid()}@${(data.settings.email || 'cardstack.local').spli
 
 async function sendMail({ to, subject, text, messageId, inReplyTo }) {
   const s = data.settings;
+  if (!getPassword()) throw Object.assign(new Error('no password'), { code: 'NOPASS' });
   const port = Number(s.port);
   const t = nodemailer.createTransport({
     host: s.host, port, secure: port === 465,
@@ -124,6 +136,8 @@ async function sendMail({ to, subject, text, messageId, inReplyTo }) {
 }
 
 function friendly(e) {
+  if (e.code === 'NOPASS')
+    return "Card Stack couldn't read your saved app password. Open Email settings and enter it again.";
   if (e.code === 'EAUTH' || e.responseCode === 535)
     return 'Your email provider rejected the sign-in. For Gmail you need an App Password (not your normal password). Right-click a card and open Email settings to fix it.';
   if (e.code === 'EENVELOPE')

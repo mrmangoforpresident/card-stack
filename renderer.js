@@ -485,7 +485,7 @@ function openSettings(then, first) {
     <label>Mail server (SMTP) and port</label>
     <div class="row"><input id="f-host" value="${esc(st.host || 'smtp.gmail.com')}"><input id="f-port" value="${esc(st.port || 465)}" style="width:72px;flex:none"></div>
     <div class="hint">Filled in automatically for Gmail, Outlook, Yahoo and iCloud. Your password is stored encrypted on this PC.</div>
-    <div class="err" id="err"></div>
+    <div class="err" id="err">${st.email && !st.hasPassword ? 'Please enter your app password again.' : ''}</div>
     <div class="actions"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="ok">Save</button></div>`,
   () => {
     $('#apw').addEventListener('click', () => api.send('open-external', 'https://myaccount.google.com/apppasswords'));
