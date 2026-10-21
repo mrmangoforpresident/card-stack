@@ -350,6 +350,7 @@ window.addEventListener('keydown', (e) => {
 
 $('#btn-add').addEventListener('click', () => openAdd());
 btnAlert.addEventListener('click', () => openAlert());
+$('#btn-think').addEventListener('click', () => openThink());
 pill.addEventListener('click', () => confirmFinish());
 
 // ---------- toast & timer pill ----------
@@ -604,6 +605,128 @@ function openAlert() {
   });
 }
 
+// ---------- think it through: one question at a time, ending in new cards ----------
+
+const QUESTIONS = [
+  ['What task are you thinking about?', 'Describe it messily.'],
+  ['Who is this for, and why do they need it?', ''],
+  ['What are the basic requirements for this task?', ''],
+  ['What are your obstacles?', "Things you don't know, people you have to wait on."],
+  ['Do you have all the resources you need at hand?', 'Websites, people to ask, other important material.'],
+  ['If you had to create a list of to-do items to get to the end, what would they be?', 'Put each one on its own line. They’ll become cards.'],
+];
+// Closing the panel keeps your answers, so you can pick up where you left off.
+let think = { step: 0, answers: [] };
+
+function openThink() {
+  const i = think.step;
+  const last = i === QUESTIONS.length - 1;
+  const [q, help] = QUESTIONS[i];
+  openPanel(`<div class="think-head"><span class="think-tag">THINK IT THROUGH</span>
+      <span class="hint">Step ${i + 1} of ${QUESTIONS.length}</span></div>
+    <div class="steps">${QUESTIONS.map((_, k) => `<i class="${k < i ? 'past' : k === i ? 'now' : ''}"></i>`).join('')}</div>
+    <h2>${esc(q)}</h2>
+    ${help ? `<p class="sub">${esc(help)}</p>` : ''}
+    <textarea id="f-ans" rows="${last ? 6 : 5}" autofocus placeholder="${last ? 'One task per line' : ''}">${esc(think.answers[i] || '')}</textarea>
+    <div id="think-out" class="hidden"></div>
+    <div class="hint">Ctrl+Enter for ${last ? 'make cards' : 'next'}${i > 0 || think.answers.some(Boolean) ? ' · <a id="restart">Start over</a>' : ''}</div>
+    <div class="err" id="err"></div>
+    <div class="actions">
+      <button class="btn ghost" id="back">${i === 0 ? 'Close' : 'Back'}</button>
+      ${last ? '' : '<button class="btn ghost" id="skip">Skip</button>'}
+      <button class="btn ${last ? 'orange' : ''}" id="next">${last ? 'Make cards' : 'Next'}</button>
+    </div>`,
+  () => {
+    const box = $('#f-ans');
+    const keep = () => (think.answers[i] = box.value);
+    const go = (step) => { keep(); think.step = step; openThink(); };
+    box.setSelectionRange(box.value.length, box.value.length);
+    $('#back').addEventListener('click', () => (i === 0 ? (keep(), closePanel()) : go(i - 1)));
+    if (!last) $('#skip').addEventListener('click', () => go(i + 1));
+    const next = () => {
+      if (!last) return go(i + 1);
+      const lines = box.value.split('\n').map((l) => l.trim()).filter(Boolean);
+      if (!lines.length) return ($('#err').textContent = 'Write at least one task, one per line.');
+      think = { step: 0, answers: [] };
+      turnIntoCards(lines);
+    };
+    $('#next').addEventListener('click', next);
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); next(); }
+    });
+    const restart = $('#restart');
+    if (restart) restart.addEventListener('click', () => { think = { step: 0, answers: [] }; openThink(); });
+  });
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Each line becomes a little card in the panel, then flies into the stack and
+// becomes a real card. Lines land last-to-first so the first one ends on top.
+async function turnIntoCards(lines) {
+  const out = $('#think-out');
+  $('#f-ans').classList.add('hidden');
+  panel.querySelectorAll('.actions .btn').forEach((b) => (b.disabled = true));
+  const order = lines.slice().reverse();
+  const tintOf = (k) => TINTS[(colorI + k) % TINTS.length];
+  out.innerHTML = lines.map((l, i) => `<div class="mini-card" style="--c:${tintOf(lines.length - 1 - i)}">${esc(l)}</div>`).join('');
+  out.classList.remove('hidden');
+  await wait(450);
+
+  const minis = [...out.children];
+  const flies = minis.map((m) => {
+    const r = m.getBoundingClientRect();
+    const f = document.createElement('div');
+    f.className = 'fly-card';
+    f.textContent = m.textContent;
+    f.style.setProperty('--c', m.style.getPropertyValue('--c'));
+    Object.assign(f.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+    $('#app').appendChild(f);
+    return f;
+  });
+  closePanel();
+  await wait(260); // let the stack fade back in before measuring where it is
+  const t = stack.getBoundingClientRect();
+  const parkedNow = focusing();
+
+  flies.slice().reverse().forEach((f, k) => {
+    const r = f.getBoundingClientRect();
+    const from = { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, borderRadius: '8px', fontSize: '12px', transform: 'rotate(0deg)', opacity: 1 };
+    const midTop = Math.min(r.top, t.top) - 50;
+    const anim = f.animate([
+      from,
+      { left: `${(r.left + t.left) / 2}px`, top: `${midTop}px`, width: `${(r.width + t.width) / 2}px`, height: `${(r.height + t.height) / 2}px`,
+        borderRadius: '10px', fontSize: '14px', transform: `rotate(${k % 2 ? 4 : -4}deg)`, opacity: 1, offset: 0.5 },
+      { left: `${t.left}px`, top: `${t.top}px`, width: `${t.width}px`, height: `${t.height}px`,
+        borderRadius: '13px', fontSize: '16px', transform: 'rotate(0deg)', opacity: parkedNow ? 0 : 1 },
+    ], { duration: 650, delay: k * 160, easing: 'cubic-bezier(.45,.05,.25,1)', fill: 'both' });
+    anim.onfinish = () => {
+      placeCard(order[k]);
+      f.remove();
+    };
+  });
+
+  await wait(650 + (lines.length - 1) * 160 + 50);
+  showToast(parkedNow
+    ? `Saved ${plural(lines.length, 'card')} for after your focus timer`
+    : `Added ${plural(lines.length, 'card')} to your stack`, 3000);
+}
+
+// Like addTasks, but for one card at a time without cancelling other
+// in-flight animations (the flying cards land one after another).
+function placeCard(text) {
+  const t = { id: uid(), text, color: COLORS[colorI++ % COLORS.length] };
+  if (focusing()) {
+    parked.unshift(t);
+    persist();
+    return;
+  }
+  tasks.unshift(t);
+  persist();
+  layout();
+  els.get(t.id).animate([{ transform: 'translateY(-4px) scale(1.04)' }, { transform: tf(0) }], { duration: 280, easing: 'ease-out' });
+}
+
 function confirmFinish() {
   const s = state.session;
   if (!s || s.end <= Date.now()) return;
@@ -622,7 +745,7 @@ api.on('state', (s) => {
 api.on('toast', (msg) => showToast(msg, 4000));
 api.on('report-sent', ({ summary, people }) =>
   openInfo("Time's up!", people ? `${summary} Your results were emailed to ${people} ${people === 1 ? 'person' : 'people'}.` : summary));
-api.on('open', (what) => ({ add: openAdd, alert: openAlert, settings: () => openSettings() })[what]());
+api.on('open', (what) => ({ add: openAdd, alert: openAlert, think: openThink, settings: () => openSettings() })[what]());
 api.on('card-action', (a) => ({ edit: openEdit, done: complete, delete: removeTop })[a]());
 
 (async () => {

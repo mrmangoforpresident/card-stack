@@ -1,6 +1,6 @@
 {
   "name": "card-stack",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "productName": "Card Stack",
   "description": "A desktop to-do pet: a stack of cards you flip through, with focus timers that email your friends.",
   "main": "main.js",

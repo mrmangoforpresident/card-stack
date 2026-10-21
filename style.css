@@ -7,6 +7,7 @@
   --gloss: linear-gradient(180deg, rgba(255, 255, 255, .92) 0%, rgba(255, 255, 255, .25) 100%);
   --orb-blue: radial-gradient(circle at 50% 115%, #9ff3ff 0%, #2fb6ec 45%, #0f6fc4 100%);
   --orb-green: radial-gradient(circle at 50% 115%, #e4ff9a 0%, #6fd23c 45%, #2e8f1c 100%);
+  --orb-aqua: radial-gradient(circle at 50% 115%, #d2fff6 0%, #31d4c2 45%, #0b8a86 100%);
   --bar-blue: linear-gradient(180deg, #6fd0ff 0%, #2593e6 50%, #1477d0 51%, #4fb6f5 100%);
   --bar-green: linear-gradient(180deg, #b6f58a 0%, #4fc82a 50%, #33a817 51%, #7ee25a 100%);
   --panel: linear-gradient(180deg, rgba(250, 254, 255, .98) 0%, rgba(222, 243, 252, .98) 100%);
@@ -149,7 +150,7 @@ html, body {
 
 /* glass tray behind the buttons, shown when the stack is empty */
 #dock {
-  position: absolute; left: 50%; top: -12px; width: 184px; height: 84px; margin-left: -92px; /* buttons are 60px; tray pads 12px */
+  position: absolute; left: 50%; top: -12px; width: 260px; height: 84px; margin-left: -130px; /* buttons are 60px; tray pads 12px */
   border-radius: 42px; overflow: hidden; cursor: grab;
   background: linear-gradient(180deg, rgba(240, 251, 255, .9) 0%, rgba(176, 226, 248, .85) 100%);
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .9), 0 0 0 1px rgba(30, 130, 200, .55), 0 10px 24px rgba(0, 70, 130, .25);
@@ -181,7 +182,7 @@ html, body {
 
 /* ---------- buttons ---------- */
 
-#controls { position: absolute; top: calc(365px + var(--peek, 0px) + var(--gap)); transition: top .42s var(--spring); left: 0; right: 0; display: flex; justify-content: center; gap: 36px; z-index: 150; }
+#controls { position: absolute; top: calc(365px + var(--peek, 0px) + var(--gap)); transition: top .42s var(--spring); left: 0; right: 0; display: flex; justify-content: center; gap: 28px; z-index: 150; }
 .round {
   position: relative; overflow: hidden;
   width: 60px; height: 60px; border: 0; border-radius: 50%; padding: 0; cursor: pointer;
@@ -191,6 +192,7 @@ html, body {
 }
 .round.add { background: var(--orb-green); }
 .round.alert { background: var(--orb-blue); }
+.round.think { background: var(--orb-aqua); }
 /* glass orb highlight */
 .round::before {
   content: ''; position: absolute; left: 12%; right: 12%; top: 4%; height: 48%;
@@ -301,3 +303,43 @@ html, body {
 #panel ::-webkit-scrollbar-track { background: transparent; }
 .btn:focus { outline: none; }
 .btn:focus-visible { outline: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 0 0 3px rgba(47, 168, 232, .35); }
+
+/* ---------- think it through ---------- */
+
+.think-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.think-head .hint { margin: 0 !important; }
+.think-tag {
+  padding: 4px 10px; border-radius: 999px; color: #fff;
+  font: 700 10.5px/1 "Segoe UI", sans-serif; letter-spacing: .1em;
+  background: linear-gradient(180deg, #5fe0d2, #13a39b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 1px 2px rgba(0, 60, 110, .3);
+  text-shadow: 0 1px 1px rgba(0, 50, 60, .4);
+}
+.steps { display: flex; gap: 6px; margin-bottom: 14px; }
+.steps i {
+  flex: 1; height: 6px; border-radius: 3px; background: #d6eaf4;
+  box-shadow: inset 0 1px 1px rgba(0, 50, 90, .15);
+}
+.steps i.past { background: linear-gradient(180deg, #8fe6dc, #31c4b6); }
+.steps i.now { background: var(--bar-blue); }
+#panel h2 + .sub { margin-bottom: 2px; }
+#f-ans { margin-top: 12px; }
+
+/* the answer lines as mini cards, just before they fly into the stack */
+#think-out { margin: 10px -4px 0; padding: 2px 4px 4px; display: flex; flex-direction: column; gap: 6px; max-height: 196px; overflow: hidden; }
+.mini-card, .fly-card {
+  box-sizing: border-box; padding: 7px 10px; border-radius: 8px; color: var(--ink);
+  font: 600 12px/1.25 "Segoe UI", sans-serif; text-align: center;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 18%, white) 0%, color-mix(in srgb, var(--c) 62%, white) 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .9), 0 0 0 1px color-mix(in srgb, var(--c) 75%, #0a3d62), 0 3px 8px rgba(0, 70, 130, .2);
+}
+.mini-card { animation: minipop .35s cubic-bezier(.34, 1.5, .64, 1) both; }
+.mini-card:nth-child(2) { animation-delay: .05s; }
+.mini-card:nth-child(3) { animation-delay: .1s; }
+.mini-card:nth-child(4) { animation-delay: .15s; }
+.mini-card:nth-child(n+5) { animation-delay: .2s; }
+@keyframes minipop { from { opacity: 0; transform: scale(.8) translateY(6px); } }
+.fly-card {
+  position: absolute; z-index: 600; pointer-events: none; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}

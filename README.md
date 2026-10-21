@@ -5,6 +5,7 @@ A little to-do pet that sits on your Windows desktop: a stack of glossy cards, o
 - **Tap** a card to flip to the next one
 - **Hold** a card to complete it
 - **Drag** a card to move the pet anywhere on your screen
+- **Think it through** (the ? button): stuck on a vague task? Answer six short questions, one at a time, and finish by listing the to-dos. Each line flies into your stack as a new card.
 - **Send an alert**: pick the tasks you're committing to and how long they'll take, and Card Stack emails your friends. Until the timer ends, only those cards stay in your stack. When time's up, it replies on the same email thread with how many you finished.
 
 ![Card Stack screenshot](docs/screenshot.png)
