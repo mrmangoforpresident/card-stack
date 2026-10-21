@@ -12,7 +12,9 @@ const BACKUP_PATH = path.join(DATA_DIR, 'data.backup.json');
 // Electron keeps the key that encrypts the saved email password in its
 // userData folder, which is named after the app. Pin it so renaming the app
 // can never make a saved password unreadable.
-app.setPath('userData', path.join(app.getPath('appData'), 'card-stack'));
+app.setPath('userData', process.env.CARDSTACK_DATA_DIR
+  ? path.join(DATA_DIR, 'electron') // test runs stay separate from the real app
+  : path.join(app.getPath('appData'), 'card-stack'));
 const ICON = path.join(__dirname, 'icon.png');
 const COLORS = ['#ffd166', '#7bdff2', '#b9f2a1', '#f7a8c8', '#c6b6ff', '#ffb68a'];
 const WIN_W = 300;
@@ -95,7 +97,7 @@ function publicState() {
   return {
     tasks: data.tasks, parked: data.parked, color_i: data.color_i, session: data.session,
     recipients: data.recipients, last_minutes: data.last_minutes,
-    always_on_top: data.always_on_top,
+    always_on_top: data.always_on_top, email_later: !!data.email_later,
     settings: { name: s.name || '', email: s.email || '', host: s.host || '', port: s.port || 465,
                 hasPassword: !!getPassword() },
   };
@@ -160,13 +162,15 @@ async function startSession({ minutes, emails, ids }) {
     `in the next ${dur} (by about ${clock(Date.now() + minutes * 60000)}):\n\n${list}\n\n` +
     "When the time is up, you'll get a reply on this thread saying how it went.\n\n- Sent with Card Stack";
   const messageId = msgId();
-  data.recipients = emails.join(', ');
   data.last_minutes = minutes;
-  save();
-  try {
-    await sendMail({ to: emails, subject, text, messageId });
-  } catch (e) {
-    return { ok: false, error: friendly(e) };
+  if (emails.length) {
+    data.recipients = emails.join(', ');
+    save();
+    try {
+      await sendMail({ to: emails, subject, text, messageId });
+    } catch (e) {
+      return { ok: false, error: friendly(e) };
+    }
   }
   const start = Date.now();
   data.session = {
@@ -191,7 +195,8 @@ async function sendReport() {
   const bullets = (xs) => (xs.length ? xs.map((x) => `  - ${x}`).join('\n') : '  (none)');
   const text = `${head}\n\n✅ Done (${done.length}):\n${bullets(done)}\n\n⬜ Not done (${left.length}):\n${bullets(left)}\n\n- Sent with Card Stack`;
   try {
-    await sendMail({ to: s.to, subject: 'Re: ' + s.subject, text, messageId: msgId(), inReplyTo: s.msgid });
+    // timer-only sessions (no recipients) just finish without emailing
+    if (s.to.length) await sendMail({ to: s.to, subject: 'Re: ' + s.subject, text, messageId: msgId(), inReplyTo: s.msgid });
   } catch (e) {
     sendingReport = false;
     nextRetry = Date.now() + 60000;
@@ -336,6 +341,11 @@ ipcMain.on('task-done', (_e, id) => {
     save();
     pushState();
   }
+});
+
+ipcMain.on('email-later', () => {
+  data.email_later = true;
+  save();
 });
 
 ipcMain.handle('save-settings', (_e, st) => {

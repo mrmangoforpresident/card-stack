@@ -18,7 +18,9 @@ A little to-do pet that sits on your Windows desktop: a stack of glossy cards, o
 
 ## Setting up email alerts
 
-Alerts are sent from your own email account. The first time you press the alert (bell) button, Card Stack asks for:
+Email is optional. The first time you press the bell button, Card Stack asks you to connect an email account. Choose **Do later** to just use the focus timer; nobody gets notified, and you can connect email any time from the right-click menu. You can also leave the recipients blank on any timer.
+
+To send alerts, Card Stack needs:
 
 - **Your email address**
 - **An app password**. For Gmail, turn on 2-Step Verification, then create one at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords). Your normal Gmail password won't work.

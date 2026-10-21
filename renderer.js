@@ -486,8 +486,17 @@ function openSettings(then, first) {
     <div class="row"><input id="f-host" value="${esc(st.host || 'smtp.gmail.com')}"><input id="f-port" value="${esc(st.port || 465)}" style="width:72px;flex:none"></div>
     <div class="hint">Filled in automatically for Gmail, Outlook, Yahoo and iCloud. Your password is stored encrypted on this PC.</div>
     <div class="err" id="err">${st.email && !st.hasPassword ? 'Please enter your app password again.' : ''}</div>
-    <div class="actions"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="ok">Save</button></div>`,
+    <div class="actions">${first ? '<button class="btn ghost" id="later">Do later</button>' : '<button class="btn ghost" data-close>Cancel</button>'}<button class="btn" id="ok">Save</button></div>`,
   () => {
+    if (first) {
+      // skip email for now: the focus timer still works, it just doesn't notify anyone
+      $('#later').addEventListener('click', () => {
+        api.send('email-later');
+        state.email_later = true;
+        closePanel();
+        if (then) then();
+      });
+    }
     $('#apw').addEventListener('click', () => api.send('open-external', 'https://myaccount.google.com/apppasswords'));
     const autofill = () => {
       const addr = $('#f-email').value.trim();
@@ -526,20 +535,23 @@ function openAlert() {
   if (state.session) return showToast('A timer is already running');
   if (!tasks.length) return showToast('Add some cards first');
   const st = state.settings;
-  if (!st.email || !st.hasPassword) return openSettings(openAlert, true);
+  const connected = !!(st.email && st.hasPassword);
+  if (!connected && !state.email_later) return openSettings(openAlert, true);
   const chips = [[15, '15m'], [30, '30m'], [45, '45m'], [60, '1h'], [90, '1½h'], [120, '2h']];
-  openPanel(`<h2>Send an alert</h2>
+  openPanel(`<h2>Start a focus timer</h2>
     <p class="sub">Only the cards you pick stay in your stack until the timer ends.</p>
     <label>Which tasks will you do? <a id="all" class="right">Select none</a></label>
     <div class="picks">${tasks.map((t) => `<label class="pick"><input type="checkbox" value="${t.id}" checked><span>${esc(t.text)}</span></label>`).join('')}</div>
     <label>How long will they take?</label>
     <div class="row"><input id="f-min" value="${esc(state.last_minutes)}" style="width:72px;flex:none" autofocus><span class="hint" style="margin:0">minutes</span></div>
     <div class="chips">${chips.map(([m, l]) => `<button class="chip" data-m="${m}">${l}</button>`).join('')}</div>
-    <label>Who should get the alert?</label>
+    ${connected ? `<label>Who should get an alert? <span class="hint" style="font-weight:400">(optional)</span></label>
     <textarea id="f-to" rows="2" placeholder="Emails, separated by commas">${esc(state.recipients)}</textarea>
-    <div class="hint">Sending from ${esc(st.email)} · <a id="change">Change</a></div>
+    <div class="hint">Leave blank to just run the timer. Sending from ${esc(st.email)} · <a id="change">Change</a></div>`
+    : `<label>Alerts</label>
+    <div class="hint" style="margin-top:0">Email isn't connected, so this timer won't notify anyone. <a id="change">Connect email</a></div>`}
     <div class="err" id="err"></div>
-    <div class="actions"><button class="btn ghost" data-close>Cancel</button><button class="btn orange" id="ok">Start timer &amp; send</button></div>`,
+    <div class="actions"><button class="btn ghost" data-close>Cancel</button><button class="btn orange" id="ok">Start timer</button></div>`,
   () => {
     const min = $('#f-min');
     const refresh = () => panel.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.m === min.value.trim()));
@@ -547,6 +559,10 @@ function openAlert() {
     min.addEventListener('input', refresh);
     refresh();
     $('#change').addEventListener('click', () => openSettings(openAlert));
+    const toBox = $('#f-to');
+    const label = () => ($('#ok').textContent = toBox && toBox.value.trim() ? 'Start timer & send' : 'Start timer');
+    if (toBox) toBox.addEventListener('input', label);
+    label();
     const boxes = [...panel.querySelectorAll('.pick input')];
     const syncAll = () => ($('#all').textContent = boxes.every((b) => b.checked) ? 'Select none' : 'Select all');
     boxes.forEach((b) => b.addEventListener('change', syncAll));
@@ -562,13 +578,12 @@ function openAlert() {
       if (!ids.length) return (err.textContent = 'Pick at least one task to focus on.');
       const m = parseFloat(min.value);
       if (!(m > 0 && m <= 24 * 60)) return (err.textContent = 'Enter how many minutes the tasks will take (for example 45).');
-      const emails = $('#f-to').value.split(/[\s,;]+/).filter(Boolean);
-      if (!emails.length) return (err.textContent = 'Add at least one email address.');
+      const emails = connected ? $('#f-to').value.split(/[\s,;]+/).filter(Boolean) : [];
       const bad = emails.find((x) => !EMAIL_RE.test(x));
       if (bad) return (err.textContent = `That doesn't look like an email address: ${bad}`);
       const ok = $('#ok');
       ok.disabled = true;
-      ok.textContent = 'Sending…';
+      ok.textContent = emails.length ? 'Sending…' : 'Starting…';
       err.textContent = '';
       const res = await api.invoke('start-session', { minutes: m, emails, ids });
       if (!panelOpen) return;
@@ -582,7 +597,7 @@ function openAlert() {
       closePanel();
       parkExcept(ids);
       updatePill();
-      showToast(`Alert sent to ${emails.length} ${emails.length === 1 ? 'person' : 'people'} · timer started`, 3500);
+      showToast(emails.length ? `Alert sent to ${emails.length} ${emails.length === 1 ? 'person' : 'people'} · timer started` : 'Focus timer started', 3500);
     };
     $('#ok').addEventListener('click', go);
     onEnter(min, go);
@@ -606,7 +621,7 @@ api.on('state', (s) => {
 });
 api.on('toast', (msg) => showToast(msg, 4000));
 api.on('report-sent', ({ summary, people }) =>
-  openInfo("Time's up!", `${summary} Your results were emailed to ${people} ${people === 1 ? 'person' : 'people'}.`));
+  openInfo("Time's up!", people ? `${summary} Your results were emailed to ${people} ${people === 1 ? 'person' : 'people'}.` : summary));
 api.on('open', (what) => ({ add: openAdd, alert: openAlert, settings: () => openSettings() })[what]());
 api.on('card-action', (a) => ({ edit: openEdit, done: complete, delete: removeTop })[a]());
 
